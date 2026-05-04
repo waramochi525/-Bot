@@ -1,17 +1,16 @@
+import os
 import discord
 from discord import app_commands
-import os
 
-# ===== トークン（Renderの環境変数から取得）=====
+# ====== トークン（Renderの環境変数から取得） ======
 TOKEN = os.getenv("DISCORD_TOKEN")
 
-# ===== intents =====
+# ====== Discord設定 ======
 intents = discord.Intents.default()
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
 
-
-# ===== 計算部分 =====
+# ====== 計算ロジック ======
 def calc_patterns(total_players, target_players, group_size=12):
     groups = total_players // group_size
     patterns = []
@@ -38,7 +37,7 @@ def get_recommend(patterns):
     return good[0] if good else None
 
 
-# ===== スラッシュコマンド =====
+# ====== スラッシュコマンド ======
 @tree.command(name="calc", description="通過人数の組み合わせを計算")
 @app_commands.describe(total="現在の人数", target="残したい人数")
 async def calc(interaction: discord.Interaction, total: int, target: int):
@@ -76,12 +75,30 @@ async def calc(interaction: discord.Interaction, total: int, target: int):
     await interaction.response.send_message(embed=embed)
 
 
-# ===== 起動時 =====
+# ====== 起動時 ======
 @client.event
 async def on_ready():
     await tree.sync()
     print(f"ログインしました: {client.user}")
 
 
-# ===== 起動 =====
+# ====== Web Service用ダミーサーバー（重要） ======
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
+
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"OK")
+
+def run_server():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(("0.0.0.0", port), Handler)
+    server.serve_forever()
+
+threading.Thread(target=run_server).start()
+
+
+# ====== 起動 ======
 client.run(TOKEN)
